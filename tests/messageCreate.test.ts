@@ -215,4 +215,92 @@ describe('messageCreate Pipeline', () => {
     const replyContent = replyMock.mock.calls[0][0].content;
     expect(replyContent).toContain('🧹 Konteks percakapan AI Anda telah di-reset');
   });
+
+  it('triggers AI when user replies to the bot without !ask', async () => {
+    vi.spyOn(aiService, 'askAI').mockResolvedValue('Mohammad Hatta wakilnya.');
+
+    const sendTypingMock = vi.fn().mockResolvedValue(undefined);
+    const replyMock = vi.fn().mockResolvedValue(undefined);
+
+    const mockMessage: any = {
+      author: { id: 'user_normal', bot: false, username: 'Budi' },
+      guild: { id: 'guild_test' },
+      member: { displayName: 'Budi', user: { username: 'Budi' } },
+      channel: {
+        sendTyping: sendTypingMock,
+        send: vi.fn(),
+        messages: {
+          cache: new Map([['bot_msg_1', { author: { id: 'bot_app_id' } }]]),
+        },
+      },
+      client: { user: { id: 'bot_app_id' } },
+      reference: { messageId: 'bot_msg_1' },
+      content: 'terus wakilnya siapa?',
+      reply: replyMock,
+      mentions: { users: new Map(), repliedUser: { id: 'bot_app_id' } },
+    };
+
+    await handleMessageCreate(mockMessage);
+
+    expect(sendTypingMock).toHaveBeenCalled();
+    expect(aiService.askAI).toHaveBeenCalledWith('terus wakilnya siapa?', 'Budi', 'user_normal');
+    expect(replyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: 'Mohammad Hatta wakilnya.',
+      })
+    );
+  });
+
+  it('triggers AI when user directly mentions the bot without !ask', async () => {
+    vi.spyOn(aiService, 'askAI').mockResolvedValue('Langit biru karena hamburan cahaya.');
+
+    const sendTypingMock = vi.fn().mockResolvedValue(undefined);
+    const replyMock = vi.fn().mockResolvedValue(undefined);
+    const mentionsMap = new Map([['bot_app_id', { id: 'bot_app_id', bot: true }]]);
+
+    const mockMessage: any = {
+      author: { id: 'user_normal', bot: false, username: 'Budi' },
+      guild: { id: 'guild_test' },
+      member: { displayName: 'Budi', user: { username: 'Budi' } },
+      channel: { sendTyping: sendTypingMock, send: vi.fn() },
+      client: { user: { id: 'bot_app_id' } },
+      content: '<@bot_app_id> kenapa langit biru?',
+      reply: replyMock,
+      mentions: { users: mentionsMap },
+    };
+
+    await handleMessageCreate(mockMessage);
+
+    expect(sendTypingMock).toHaveBeenCalled();
+    expect(aiService.askAI).toHaveBeenCalledWith('kenapa langit biru?', 'Budi', 'user_normal');
+    expect(replyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: 'Langit biru karena hamburan cahaya.',
+      })
+    );
+  });
+
+  it('replies with annoyance when bot is mentioned with empty text', async () => {
+    const replyMock = vi.fn().mockResolvedValue(undefined);
+    const mentionsMap = new Map([['bot_app_id', { id: 'bot_app_id', bot: true }]]);
+
+    const mockMessage: any = {
+      author: { id: 'user_normal', bot: false, username: 'Budi' },
+      guild: { id: 'guild_test' },
+      member: { displayName: 'Budi', user: { username: 'Budi' } },
+      channel: { sendTyping: vi.fn(), send: vi.fn() },
+      client: { user: { id: 'bot_app_id' } },
+      content: '<@bot_app_id>',
+      reply: replyMock,
+      mentions: { users: mentionsMap },
+    };
+
+    await handleMessageCreate(mockMessage);
+
+    expect(replyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: expect.stringContaining('Napa manggil-manggil gue?'),
+      })
+    );
+  });
 });

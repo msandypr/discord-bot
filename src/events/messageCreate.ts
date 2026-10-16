@@ -10,6 +10,43 @@ const AFK_COMMAND_REGEX = /^!afk(?:\s+(.*))?$/i;
 const ASK_COMMAND_REGEX = /^!ask(?:\s+(.*))?$/i;
 const RESET_COMMAND_REGEX = /^!reset$/i;
 
+async function processAiQuery(
+  message: Message,
+  prompt: string,
+  displayName: string,
+  userId: string
+): Promise<void> {
+  try {
+    // Tampilkan indikator status "Bot is typing..." jika channel mendukung
+    if ('sendTyping' in message.channel) {
+      await message.channel.sendTyping();
+    }
+
+    const answer = await aiService.askAI(prompt, displayName, userId);
+
+    // Pisahkan teks jika melebihi batas 2000 karakter Discord
+    const chunks = splitDiscordMessage(answer, 2000);
+
+    // Reply langsung ke pesan pengirim untuk potongan pertama
+    await message.reply({
+      content: chunks[0],
+      allowedMentions: { repliedUser: true },
+    });
+
+    // Kirim sisa potongan jika ada
+    if ('send' in message.channel) {
+      for (let i = 1; i < chunks.length; i++) {
+        await message.channel.send({ content: chunks[i] });
+      }
+    }
+  } catch (error) {
+    console.error('Error saat memproses pertanyaan AI:', error);
+    await message.reply({
+      content: 'Maaf bro, gue lagi sibuk',
+    });
+  }
+}
+
 export async function handleMessageCreate(message: Message): Promise<void> {
   // 1. Abaikan pesan dari bot atau pesan di luar server (Direct Message)
   if (message.author.bot || !message.guild || !message.member) {
@@ -100,36 +137,8 @@ export async function handleMessageCreate(message: Message): Promise<void> {
       return;
     }
 
-    try {
-      // Tampilkan indikator status "Bot is typing..." jika channel mendukung
-      if ('sendTyping' in message.channel) {
-        await message.channel.sendTyping();
-      }
-
-      const displayName = member.displayName || message.author.username;
-      const answer = await aiService.askAI(prompt, displayName, userId);
-
-      // Pisahkan teks jika melebihi batas 2000 karakter Discord
-      const chunks = splitDiscordMessage(answer, 2000);
-
-      // Reply langsung ke pesan pengirim untuk potongan pertama
-      await message.reply({
-        content: chunks[0],
-        allowedMentions: { repliedUser: true },
-      });
-
-      // Kirim sisa potongan jika ada
-      if ('send' in message.channel) {
-        for (let i = 1; i < chunks.length; i++) {
-          await message.channel.send({ content: chunks[i] });
-        }
-      }
-    } catch (error) {
-      console.error('Error saat memproses command !ask:', error);
-      await message.reply({
-        content: 'Maaf bro, gue lagi sibuk',
-      });
-    }
+    const displayName = member.displayName || message.author.username;
+    await processAiQuery(message, prompt, displayName, userId);
     return;
   }
 
@@ -143,7 +152,50 @@ export async function handleMessageCreate(message: Message): Promise<void> {
     return;
   }
 
-  // 6. Rule 5: AFK Mention Auto-Responder (Ping Notification)
+  // 6. Rule 5: Reply ke pesan Bot atau Mention Bot langsung (@Bot) tanpa !ask
+  const botId = message.client?.user?.id;
+  let isReplyingToBot = false;
+
+  if (message.reference?.messageId && botId) {
+    if (message.mentions.repliedUser?.id === botId) {
+      isReplyingToBot = true;
+    } else if (message.channel && 'messages' in message.channel) {
+      try {
+        const refMsg =
+          message.channel.messages.cache.get(message.reference.messageId) ||
+          (await message.channel.messages.fetch(message.reference.messageId));
+        if (refMsg?.author?.id === botId) {
+          isReplyingToBot = true;
+        }
+      } catch {
+        // Abaikan jika pesan referensi tidak dapat di-fetch
+      }
+    }
+  }
+
+  const isDirectBotMention = Boolean(botId && message.mentions.users.has(botId));
+
+  if (isReplyingToBot || isDirectBotMention) {
+    // Bersihkan tag mention bot jika ada
+    let cleanPrompt = content;
+    if (botId) {
+      cleanPrompt = cleanPrompt.replace(new RegExp(`<@!?${botId}>`, 'g'), '').trim();
+    }
+
+    if (!cleanPrompt) {
+      await message.reply({
+        content: 'Napa manggil-manggil gue? Mau nanya apaan, buruan.',
+        allowedMentions: { repliedUser: true },
+      });
+      return;
+    }
+
+    const displayName = member.displayName || message.author.username;
+    await processAiQuery(message, cleanPrompt, displayName, userId);
+    return;
+  }
+
+  // 7. Rule 6: AFK Mention Auto-Responder (Ping Notification)
   if (message.mentions.users.size > 0) {
     for (const [mentionedId, mentionedUser] of message.mentions.users) {
       // Abaikan self-mention dan bot
