@@ -27,4 +27,10 @@ describe('AI Persona & System Prompt', () => {
     expect(DEFAULT_AI_PERSONA).toContain('WAJIB PAKAI EMOJI EKSPRESIF');
     expect(DEFAULT_AI_PERSONA).toContain('TANGGAPI PESAN REPLY DENGAN NYAMBUNG');
   });
+
+  it('enforces anak Jaksel persona style and anti-hallucination factual grounding', () => {
+    expect(DEFAULT_AI_PERSONA).toContain('Jaksel');
+    expect(DEFAULT_AI_PERSONA).toContain('ANTI-HALU & TETAP NYAMBUNG SECARA FAKTA');
+    expect(DEFAULT_AI_PERSONA).toContain('literally');
+  });
 });

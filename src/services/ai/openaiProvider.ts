@@ -6,32 +6,43 @@ import { buildSystemPrompt } from './persona.js';
 export class OpenAICompatibleProvider implements AIProvider {
   public readonly name: string;
   public readonly model: string;
+  public readonly temperature: number;
   private systemPrompt?: string;
   private client: OpenAI | null = null;
 
-  constructor(apiKey?: string, baseURL?: string, model: string = 'gpt-4o-mini', systemPrompt?: string) {
+  constructor(
+    apiKey?: string,
+    baseURL?: string,
+    model: string = 'llama-3.1-8b-instant',
+    systemPrompt?: string,
+    temperature: number = 0.7
+  ) {
     this.model = model;
     this.systemPrompt = systemPrompt;
+    this.temperature = temperature;
+
+    // Otomatis gunakan Groq jika apiKey berawalan 'gsk_' dan baseURL belum diatur
+    const effectiveBaseURL = baseURL || (apiKey?.startsWith('gsk_') ? 'https://api.groq.com/openai/v1' : undefined);
 
     // Tentukan label display provider yang ramah
-    if (baseURL) {
-      if (baseURL.includes('groq.com')) this.name = 'Groq';
-      else if (baseURL.includes('deepseek.com')) this.name = 'DeepSeek';
-      else if (baseURL.includes('openrouter.ai')) this.name = 'OpenRouter';
-      else if (baseURL.includes('dahl.global')) this.name = 'Dahl Inference';
-      else if (baseURL.includes('localhost') || baseURL.includes('127.0.0.1')) this.name = 'Local LLM (Ollama/LM Studio)';
+    if (effectiveBaseURL) {
+      if (effectiveBaseURL.includes('groq.com')) this.name = 'Groq';
+      else if (effectiveBaseURL.includes('deepseek.com')) this.name = 'DeepSeek';
+      else if (effectiveBaseURL.includes('openrouter.ai')) this.name = 'OpenRouter';
+      else if (effectiveBaseURL.includes('dahl.global')) this.name = 'Dahl Inference';
+      else if (effectiveBaseURL.includes('localhost') || effectiveBaseURL.includes('127.0.0.1')) this.name = 'Local LLM (Ollama/LM Studio)';
       else this.name = 'OpenAI-Compatible';
     } else {
       this.name = 'OpenAI';
     }
 
     // Untuk provider lokal seperti Ollama, jika apiKey tidak diisi, berikan fallback dummy key
-    const effectiveKey = apiKey || (baseURL ? 'ollama-local-key' : '');
+    const effectiveKey = apiKey || (effectiveBaseURL ? 'ollama-local-key' : '');
 
     if (effectiveKey) {
       this.client = new OpenAI({
         apiKey: effectiveKey,
-        baseURL: baseURL || undefined,
+        baseURL: effectiveBaseURL || undefined,
       });
     }
   }
@@ -61,7 +72,7 @@ export class OpenAICompatibleProvider implements AIProvider {
       const completion = await this.client.chat.completions.create({
         model: this.model,
         messages,
-        temperature: 0.8,
+        temperature: this.temperature,
       });
 
       const reply = completion.choices[0]?.message?.content?.trim();

@@ -13,7 +13,7 @@ Bot Discord multifungsi yang memadukan **AI Personal Assistant** berbasis multi-
    * **Penyedia AI yang Didukung:**
      * **Google Gemini:** Native support via `@google/genai` (`gemini-2.5-flash`, `gemini-1.5-flash`).
      * **Dahl Inference:** Inferensi terdesentralisasi via [Dahl Global](https://inference.dahl.global/) (`MiniMaxAI/MiniMax-M2.7`, `deepseek-ai/DeepSeek-V4-Flash-0731`, `zai-org/GLM-5.3-Flash`).
-     * **Groq:** Inferensi ultra-cepat gratis (`llama-3.3-70b-versatile`).
+     * **Groq:** Inferensi ultra-cepat gratis (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`).
      * **DeepSeek:** Model penalaran & chat hemat biaya (`deepseek-chat`, `deepseek-reasoner`).
      * **OpenRouter:** Akses ratusan model open-source & proprietary.
      * **Local LLM (Offline):** Dukungan penuh untuk Ollama (`http://localhost:11434/v1`) dan LM Studio tanpa biaya API.
@@ -80,7 +80,8 @@ OPENAI_MODEL=MiniMaxAI/MiniMax-M2.7
 AI_PROVIDER=openai
 OPENAI_BASE_URL=https://api.groq.com/openai/v1
 OPENAI_API_KEY=gsk_...
-OPENAI_MODEL=llama-3.3-70b-versatile
+OPENAI_MODEL=llama-3.1-8b-instant
+AI_TEMPERATURE=0.7
 ```
 
 #### Opsi D: DeepSeek

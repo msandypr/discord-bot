@@ -64,6 +64,17 @@ describe('AI Provider Factory & Selection', () => {
     const provider = createAIProvider(cfg);
     expect(provider).toBeInstanceOf(OpenAICompatibleProvider);
   });
+
+  it('defaults to llama-3.1-8b-instant and temperature 0.7 for OpenAICompatibleProvider', () => {
+    const provider = new OpenAICompatibleProvider('sk-key');
+    expect(provider.model).toBe('llama-3.1-8b-instant');
+    expect(provider.temperature).toBe(0.7);
+  });
+
+  it('automatically sets baseURL to Groq when apiKey starts with gsk_ without explicit baseURL', () => {
+    const provider = new OpenAICompatibleProvider('gsk_test123456');
+    expect(provider.name).toBe('Groq');
+  });
 });
 
 describe('OpenAICompatibleProvider Response & Error Handling', () => {
