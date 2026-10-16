@@ -1,0 +1,36 @@
+{
+  "name": "discord-bot",
+  "version": "1.0.0",
+  "description": "Discord Personal Assistant (Gemini AI) and AFK Manager Bot",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts",
+    "deploy-commands": "tsx src/commands/deploy-commands.ts",
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "gemini",
+    "afk"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google/genai": "^2.30.0",
+    "better-sqlite3": "^13.0.3",
+    "discord.js": "^14.27.0",
+    "dotenv": "^18.0.8",
+    "openai": "^7.34.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.12"
+  }
+}
