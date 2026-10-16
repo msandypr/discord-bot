@@ -45,7 +45,7 @@ export class AIService {
 
   public async askAI(prompt: string, userDisplayName?: string, userId?: string): Promise<string> {
     const history = userId ? conversationStore.getHistory(userId) : [];
-    const reply = await this.provider.generateResponse(prompt, userDisplayName, history);
+    const reply = await this.provider.generateResponse(prompt, userDisplayName, history, userId);
 
     // Simpan interaksi ke sesi jika berhasil dan userId ada
     if (userId && reply && reply !== 'Maaf bro, gue lagi sibuk') {

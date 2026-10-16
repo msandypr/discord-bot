@@ -20,14 +20,15 @@ export class GeminiProvider implements AIProvider {
   public async generateResponse(
     prompt: string,
     userDisplayName?: string,
-    history: ChatMessage[] = []
+    history: ChatMessage[] = [],
+    userId?: string
   ): Promise<string> {
     if (!this.ai) {
       return '⚠️ **Konfigurasi Belum Lengkap:** `GEMINI_API_KEY` belum diset di file .env server bot.';
     }
 
     try {
-      const systemInstruction = buildSystemPrompt(userDisplayName, this.systemPrompt);
+      const systemInstruction = buildSystemPrompt(userDisplayName, this.systemPrompt, userId);
 
       const contents = [
         ...history.map(msg => ({

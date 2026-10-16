@@ -17,6 +17,7 @@ export interface AIProvider {
   generateResponse(
     prompt: string,
     userDisplayName?: string,
-    history?: ChatMessage[]
+    history?: ChatMessage[],
+    userId?: string
   ): Promise<string>;
 }

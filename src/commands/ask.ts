@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, GuildMember } from 'discord.js';
 import { aiService } from '../services/ai/index.js';
 import { splitDiscordMessage } from '../utils/chunker.js';
+import { formatDiscordMentions } from '../utils/mentions.js';
 
 export const askCommandData = new SlashCommandBuilder()
   .setName('ask')
@@ -26,15 +27,26 @@ export async function handleAskCommand(interaction: ChatInputCommandInteraction)
 
     const answer = await aiService.askAI(prompt, displayName, interaction.user.id);
 
+    const formattedAnswer = formatDiscordMentions(answer, [
+      { id: interaction.user.id, name: displayName },
+      { id: interaction.user.id, name: interaction.user.username },
+    ]);
+
     // Discord message limit is 2000 characters
-    const chunks = splitDiscordMessage(answer, 2000);
+    const chunks = splitDiscordMessage(formattedAnswer, 2000);
 
     // Edit pesan deferral pertama
-    await interaction.editReply({ content: chunks[0] });
+    await interaction.editReply({
+      content: chunks[0],
+      allowedMentions: { parse: ['users'] },
+    });
 
     // Kirim sisa potongan sebagai pesan follow-up jika balasan sangat panjang
     for (let i = 1; i < chunks.length; i++) {
-      await interaction.followUp({ content: chunks[i] });
+      await interaction.followUp({
+        content: chunks[i],
+        allowedMentions: { parse: ['users'] },
+      });
     }
   } catch (error) {
     console.error('Error handling /ask command:', error);

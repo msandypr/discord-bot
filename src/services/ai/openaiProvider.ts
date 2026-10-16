@@ -39,14 +39,15 @@ export class OpenAICompatibleProvider implements AIProvider {
   public async generateResponse(
     prompt: string,
     userDisplayName?: string,
-    history: ChatMessage[] = []
+    history: ChatMessage[] = [],
+    userId?: string
   ): Promise<string> {
     if (!this.client) {
       return `⚠️ **Konfigurasi Belum Lengkap:** \`OPENAI_API_KEY\` belum diset di file .env server bot.`;
     }
 
     try {
-      const systemInstruction = buildSystemPrompt(userDisplayName, this.systemPrompt);
+      const systemInstruction = buildSystemPrompt(userDisplayName, this.systemPrompt, userId);
 
       const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
         { role: 'system', content: systemInstruction },

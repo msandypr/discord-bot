@@ -5,6 +5,7 @@ import { conversationStore } from '../services/conversationStore.js';
 import { formatAfkNickname, removeAfkPrefix } from '../utils/nickname.js';
 import { splitDiscordMessage } from '../utils/chunker.js';
 import { timeSince } from '../utils/time.js';
+import { formatDiscordMentions, MentionUser } from '../utils/mentions.js';
 
 const AFK_COMMAND_REGEX = /^!afk(?:\s+(.*))?$/i;
 const ASK_COMMAND_REGEX = /^!ask(?:\s+(.*))?$/i;
@@ -14,7 +15,8 @@ async function processAiQuery(
   message: Message,
   prompt: string,
   displayName: string,
-  userId: string
+  userId: string,
+  mentionUsers: MentionUser[] = []
 ): Promise<void> {
   try {
     // Tampilkan indikator status "Bot is typing..." jika channel mendukung
@@ -24,19 +26,29 @@ async function processAiQuery(
 
     const answer = await aiService.askAI(prompt, displayName, userId);
 
-    // Pisahkan teks jika melebihi batas 2000 karakter Discord
-    const chunks = splitDiscordMessage(answer, 2000);
+    // Otomatis ubah @nama menjadi format resmi <@id> agar benar-benar me-mention / nge-ping orangnya di Discord
+    const formattedAnswer = formatDiscordMentions(answer, [
+      { id: userId, name: displayName },
+      { id: userId, name: message.author.username },
+      ...mentionUsers,
+    ]);
 
-    // Reply langsung ke pesan pengirim untuk potongan pertama
+    // Pisahkan teks jika melebihi batas 2000 karakter Discord
+    const chunks = splitDiscordMessage(formattedAnswer, 2000);
+
+    // Reply langsung ke pesan pengirim untuk potongan pertama dengan allowedMentions parse: ['users']
     await message.reply({
       content: chunks[0],
-      allowedMentions: { repliedUser: true },
+      allowedMentions: { repliedUser: true, parse: ['users'] },
     });
 
     // Kirim sisa potongan jika ada
     if ('send' in message.channel) {
       for (let i = 1; i < chunks.length; i++) {
-        await message.channel.send({ content: chunks[i] });
+        await message.channel.send({
+          content: chunks[i],
+          allowedMentions: { parse: ['users'] },
+        });
       }
     }
   } catch (error) {
@@ -47,15 +59,22 @@ async function processAiQuery(
   }
 }
 
+interface ReferencedContextResult {
+  isReplyingToBot: boolean;
+  referencedContext: string;
+  referencedAuthor?: MentionUser;
+}
+
 async function getReferencedMessageContext(
   message: Message,
   botId?: string
-): Promise<{ isReplyingToBot: boolean; referencedContext: string }> {
+): Promise<ReferencedContextResult> {
   let isReplyingToBot = false;
   let referencedContext = '';
+  let referencedAuthor: MentionUser | undefined;
 
   if (!message.reference?.messageId) {
-    return { isReplyingToBot, referencedContext };
+    return { isReplyingToBot, referencedContext, referencedAuthor };
   }
 
   // Cek apakah user me-reply dengan ping aktif ke bot
@@ -74,9 +93,13 @@ async function getReferencedMessageContext(
           isReplyingToBot = true;
         } else {
           const authorName = refMsg.member?.displayName || refMsg.author?.username || 'User Lain';
+          const authorId = refMsg.author?.id;
           const cleanRefContent = refMsg.content?.trim();
           if (cleanRefContent) {
-            referencedContext = `[Konteks pesan yang sedang di-reply dari @${authorName}]: "${cleanRefContent}"\n`;
+            if (authorId) {
+              referencedAuthor = { id: authorId, name: authorName };
+            }
+            referencedContext = `[Konteks pesan yang sedang di-reply dari ${authorName}${authorId ? ` (tag: <@${authorId}>)` : ''}]: "${cleanRefContent}"\n`;
           }
         }
       }
@@ -85,7 +108,7 @@ async function getReferencedMessageContext(
     }
   }
 
-  return { isReplyingToBot, referencedContext };
+  return { isReplyingToBot, referencedContext, referencedAuthor };
 }
 
 export async function handleMessageCreate(message: Message): Promise<void> {
@@ -170,7 +193,8 @@ export async function handleMessageCreate(message: Message): Promise<void> {
 
   // Cek apakah pesan ini me-reply pesan lain di server
   const botId = message.client?.user?.id;
-  const { isReplyingToBot, referencedContext } = await getReferencedMessageContext(message, botId);
+  const { isReplyingToBot, referencedContext, referencedAuthor } = await getReferencedMessageContext(message, botId);
+  const mentionTargets: MentionUser[] = referencedAuthor ? [referencedAuthor] : [];
 
   // 4. Rule 3: Text Command !ask [pertanyaan]
   const askMatch = content.match(ASK_COMMAND_REGEX);
@@ -191,7 +215,7 @@ export async function handleMessageCreate(message: Message): Promise<void> {
       ? `${referencedContext}[Tanggapan/Pertanyaan dari ${displayName}]: "${prompt}"`
       : prompt;
 
-    await processAiQuery(message, fullPrompt, displayName, userId);
+    await processAiQuery(message, fullPrompt, displayName, userId, mentionTargets);
     return;
   }
 
@@ -219,7 +243,7 @@ export async function handleMessageCreate(message: Message): Promise<void> {
     if (referencedContext) {
       const userQuestion = cleanPrompt || 'Gimana menurut lu? Komentarin atau tanggapi pesan di atas.';
       const fullPrompt = `${referencedContext}[Tanggapan/Pertanyaan dari ${displayName}]: "${userQuestion}"`;
-      await processAiQuery(message, fullPrompt, displayName, userId);
+      await processAiQuery(message, fullPrompt, displayName, userId, mentionTargets);
       return;
     }
 
@@ -233,7 +257,7 @@ export async function handleMessageCreate(message: Message): Promise<void> {
     }
 
     // Kasus 3: User me-reply bot langsung, atau mention bot dengan pertanyaan
-    await processAiQuery(message, cleanPrompt, displayName, userId);
+    await processAiQuery(message, cleanPrompt, displayName, userId, mentionTargets);
     return;
   }
 

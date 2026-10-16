@@ -142,7 +142,7 @@ describe('Unified AIService', () => {
     const result = await service.askAI('Tes pertanyaan', 'Bob');
 
     expect(result).toBe('Balasan dari Mock AI');
-    expect(mockProvider.generateResponse).toHaveBeenCalledWith('Tes pertanyaan', 'Bob', []);
+    expect(mockProvider.generateResponse).toHaveBeenCalledWith('Tes pertanyaan', 'Bob', [], undefined);
   });
 
   it('manages conversation history per userId across multiple turns', async () => {
@@ -161,7 +161,7 @@ describe('Unified AIService', () => {
     // Turn 1
     const res1 = await service.askAI('Siapa kamu?', 'Alice', testUserId);
     expect(res1).toBe('Jawaban turn 1');
-    expect(mockProvider.generateResponse).toHaveBeenNthCalledWith(1, 'Siapa kamu?', 'Alice', []);
+    expect(mockProvider.generateResponse).toHaveBeenNthCalledWith(1, 'Siapa kamu?', 'Alice', [], testUserId);
 
     // Turn 2
     const res2 = await service.askAI('Apa yang baru saya tanyakan?', 'Alice', testUserId);
@@ -169,6 +169,6 @@ describe('Unified AIService', () => {
     expect(mockProvider.generateResponse).toHaveBeenNthCalledWith(2, 'Apa yang baru saya tanyakan?', 'Alice', [
       { role: 'user', content: 'Siapa kamu?' },
       { role: 'assistant', content: 'Jawaban turn 1' },
-    ]);
+    ], testUserId);
   });
 });

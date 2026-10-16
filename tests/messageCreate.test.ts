@@ -172,7 +172,7 @@ describe('messageCreate Pipeline', () => {
     expect(aiService.askAI).toHaveBeenCalledWith('apa perbedaan RAM dan ROM?', 'Budi', 'user_normal');
     expect(replyMock).toHaveBeenCalledWith({
       content: 'RAM adalah memori sementara, ROM adalah memori permanen.',
-      allowedMentions: { repliedUser: true },
+      allowedMentions: { repliedUser: true, parse: ['users'] },
     });
   });
 
@@ -342,7 +342,7 @@ describe('messageCreate Pipeline', () => {
 
     expect(sendTypingMock).toHaveBeenCalled();
     expect(aiService.askAI).toHaveBeenCalledWith(
-      expect.stringContaining('[Konteks pesan yang sedang di-reply dari @Budi]: "Gue mau ngehack NASA pake tag <div> HTML bro."'),
+      expect.stringContaining('[Konteks pesan yang sedang di-reply dari Budi (tag: <@user_friend>)]: "Gue mau ngehack NASA pake tag <div> HTML bro."'),
       'Agus',
       'user_normal'
     );
@@ -395,7 +395,7 @@ describe('messageCreate Pipeline', () => {
 
     expect(sendTypingMock).toHaveBeenCalled();
     expect(aiService.askAI).toHaveBeenCalledWith(
-      expect.stringContaining('[Konteks pesan yang sedang di-reply dari @Budi]: "Gue mau beli laptop 50 juta buat main Zuma."'),
+      expect.stringContaining('[Konteks pesan yang sedang di-reply dari Budi (tag: <@user_friend>)]: "Gue mau beli laptop 50 juta buat main Zuma."'),
       'Agus',
       'user_normal'
     );

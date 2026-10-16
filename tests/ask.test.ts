@@ -27,7 +27,10 @@ describe('/ask Command Handler', () => {
 
     expect(deferReplyMock).toHaveBeenCalled();
     expect(aiService.askAI).toHaveBeenCalledWith('Jelaskan teori relativitas', 'TestUser', 'user-123');
-    expect(editReplyMock).toHaveBeenCalledWith({ content: 'Ini adalah balasan AI dari model aktif.' });
+    expect(editReplyMock).toHaveBeenCalledWith({
+      content: 'Ini adalah balasan AI dari model aktif.',
+      allowedMentions: { parse: ['users'] },
+    });
     expect(followUpMock).not.toHaveBeenCalled();
   });
 
