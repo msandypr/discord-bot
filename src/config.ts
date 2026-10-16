@@ -18,6 +18,7 @@ export interface Config {
   openaiApiKey: string;
   openaiBaseUrl?: string;
   openaiModel: string;
+  aiSystemPrompt?: string;
 }
 
 export function loadConfig(): Config {
@@ -55,6 +56,7 @@ export function loadConfig(): Config {
     openaiApiKey,
     openaiBaseUrl,
     openaiModel: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+    aiSystemPrompt: process.env.AI_SYSTEM_PROMPT || undefined,
   };
 }
 

@@ -24,7 +24,7 @@ export async function handleAskCommand(interaction: ChatInputCommandInteraction)
         ? interaction.member.displayName
         : interaction.user.displayName || interaction.user.username;
 
-    const answer = await aiService.askAI(prompt, displayName);
+    const answer = await aiService.askAI(prompt, displayName, interaction.user.id);
 
     // Discord message limit is 2000 characters
     const chunks = splitDiscordMessage(answer, 2000);
@@ -41,11 +41,11 @@ export async function handleAskCommand(interaction: ChatInputCommandInteraction)
     try {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply({
-          content: '❌ Maaf, terjadi kesalahan internal saat memproses perintah `/ask`.',
+          content: 'Maaf bro, gue lagi sibuk',
         });
       } else {
         await interaction.reply({
-          content: '❌ Maaf, terjadi kesalahan internal saat memproses perintah `/ask`.',
+          content: 'Maaf bro, gue lagi sibuk',
           ephemeral: true,
         });
       }

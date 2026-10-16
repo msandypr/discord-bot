@@ -14,7 +14,7 @@ describe('/ask Command Handler', () => {
       options: {
         getString: vi.fn().mockReturnValue('Jelaskan teori relativitas'),
       },
-      user: { username: 'TestUser', displayName: 'TestUser' },
+      user: { id: 'user-123', username: 'TestUser', displayName: 'TestUser' },
       member: null,
       deferReply: deferReplyMock,
       editReply: editReplyMock,
@@ -26,7 +26,7 @@ describe('/ask Command Handler', () => {
     await handleAskCommand(mockInteraction);
 
     expect(deferReplyMock).toHaveBeenCalled();
-    expect(aiService.askAI).toHaveBeenCalledWith('Jelaskan teori relativitas', 'TestUser');
+    expect(aiService.askAI).toHaveBeenCalledWith('Jelaskan teori relativitas', 'TestUser', 'user-123');
     expect(editReplyMock).toHaveBeenCalledWith({ content: 'Ini adalah balasan AI dari model aktif.' });
     expect(followUpMock).not.toHaveBeenCalled();
   });

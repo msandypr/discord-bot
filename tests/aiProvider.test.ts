@@ -49,6 +49,9 @@ describe('AI Provider Factory & Selection', () => {
 
     const openrouter = new OpenAICompatibleProvider('key', 'https://openrouter.ai/api/v1', 'auto');
     expect(openrouter.name).toBe('OpenRouter');
+
+    const dahl = new OpenAICompatibleProvider('key', 'https://inference.dahl.global/v1', 'MiniMaxAI/MiniMax-M2.7');
+    expect(dahl.name).toBe('Dahl Inference');
   });
 
   it('respects explicit AI_PROVIDER=openai even if GEMINI_API_KEY is also present', () => {
@@ -95,8 +98,7 @@ describe('OpenAICompatibleProvider Response & Error Handling', () => {
     };
 
     const response = await provider.generateResponse('Halo!');
-    expect(response).toContain('Koneksi Gagal');
-    expect(response).toContain('Ollama');
+    expect(response).toBe('Maaf bro, gue lagi sibuk');
   });
 
   it('handles 401 invalid API key error', async () => {
@@ -110,12 +112,26 @@ describe('OpenAICompatibleProvider Response & Error Handling', () => {
     };
 
     const response = await provider.generateResponse('Test');
-    expect(response).toContain('Error Autentikasi');
+    expect(response).toBe('Maaf bro, gue lagi sibuk');
+  });
+
+  it('handles 402 token exhaustion error (e.g. Dahl Inference)', async () => {
+    const provider = new OpenAICompatibleProvider('valid-key', 'https://inference.dahl.global/v1', 'MiniMaxAI/MiniMax-M2.7');
+
+    const paymentError = new Error('available tokens exhausted');
+    (paymentError as any).status = 402;
+    const mockCreate = vi.fn().mockRejectedValue(paymentError);
+    (provider as any).client = {
+      chat: { completions: { create: mockCreate } },
+    };
+
+    const response = await provider.generateResponse('Test');
+    expect(response).toBe('Maaf bro, gue lagi sibuk');
   });
 });
 
 describe('Unified AIService', () => {
-  it('delegates askAI to the active provider', async () => {
+  it('delegates askAI to the active provider with empty history when userId is omitted', async () => {
     const mockProvider = {
       name: 'MockProvider',
       model: 'mock-1',
@@ -126,6 +142,33 @@ describe('Unified AIService', () => {
     const result = await service.askAI('Tes pertanyaan', 'Bob');
 
     expect(result).toBe('Balasan dari Mock AI');
-    expect(mockProvider.generateResponse).toHaveBeenCalledWith('Tes pertanyaan', 'Bob');
+    expect(mockProvider.generateResponse).toHaveBeenCalledWith('Tes pertanyaan', 'Bob', []);
+  });
+
+  it('manages conversation history per userId across multiple turns', async () => {
+    const mockProvider = {
+      name: 'MockProvider',
+      model: 'mock-1',
+      generateResponse: vi
+        .fn()
+        .mockResolvedValueOnce('Jawaban turn 1')
+        .mockResolvedValueOnce('Jawaban turn 2'),
+    };
+
+    const service = new AIService(mockProvider);
+    const testUserId = 'user-context-test';
+
+    // Turn 1
+    const res1 = await service.askAI('Siapa kamu?', 'Alice', testUserId);
+    expect(res1).toBe('Jawaban turn 1');
+    expect(mockProvider.generateResponse).toHaveBeenNthCalledWith(1, 'Siapa kamu?', 'Alice', []);
+
+    // Turn 2
+    const res2 = await service.askAI('Apa yang baru saya tanyakan?', 'Alice', testUserId);
+    expect(res2).toBe('Jawaban turn 2');
+    expect(mockProvider.generateResponse).toHaveBeenNthCalledWith(2, 'Apa yang baru saya tanyakan?', 'Alice', [
+      { role: 'user', content: 'Siapa kamu?' },
+      { role: 'assistant', content: 'Jawaban turn 1' },
+    ]);
   });
 });

@@ -1,5 +1,7 @@
 import { Interaction } from 'discord.js';
 import { handleAskCommand } from '../commands/ask.js';
+import { handleResetCommand } from '../commands/reset.js';
+import { handleAfkCommand, handleUnafkCommand } from '../commands/afk.js';
 
 export async function handleInteractionCreate(interaction: Interaction): Promise<void> {
   if (!interaction.isChatInputCommand()) {
@@ -8,5 +10,11 @@ export async function handleInteractionCreate(interaction: Interaction): Promise
 
   if (interaction.commandName === 'ask') {
     await handleAskCommand(interaction);
+  } else if (interaction.commandName === 'reset') {
+    await handleResetCommand(interaction);
+  } else if (interaction.commandName === 'afk') {
+    await handleAfkCommand(interaction);
+  } else if (interaction.commandName === 'unafk') {
+    await handleUnafkCommand(interaction);
   }
 }

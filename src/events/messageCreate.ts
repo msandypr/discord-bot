@@ -1,9 +1,14 @@
-import { Message, GuildMember } from 'discord.js';
+import { Message } from 'discord.js';
 import { afkStore } from '../services/afkStore.js';
+import { aiService } from '../services/ai/index.js';
+import { conversationStore } from '../services/conversationStore.js';
 import { formatAfkNickname, removeAfkPrefix } from '../utils/nickname.js';
+import { splitDiscordMessage } from '../utils/chunker.js';
 import { timeSince } from '../utils/time.js';
 
 const AFK_COMMAND_REGEX = /^!afk(?:\s+(.*))?$/i;
+const ASK_COMMAND_REGEX = /^!ask(?:\s+(.*))?$/i;
+const RESET_COMMAND_REGEX = /^!reset$/i;
 
 export async function handleMessageCreate(message: Message): Promise<void> {
   // 1. Abaikan pesan dari bot atau pesan di luar server (Direct Message)
@@ -84,7 +89,61 @@ export async function handleMessageCreate(message: Message): Promise<void> {
     }
   }
 
-  // 4. Rule 3: AFK Mention Auto-Responder (Ping Notification)
+  // 4. Rule 3: Text Command !ask [pertanyaan]
+  const askMatch = content.match(ASK_COMMAND_REGEX);
+  if (askMatch) {
+    const prompt = askMatch[1]?.trim();
+    if (!prompt) {
+      await message.reply({
+        content: '⚠️ Harap sertakan pertanyaan Anda.\nContoh: `!ask apa perbedaan RAM dan ROM?`',
+      });
+      return;
+    }
+
+    try {
+      // Tampilkan indikator status "Bot is typing..." jika channel mendukung
+      if ('sendTyping' in message.channel) {
+        await message.channel.sendTyping();
+      }
+
+      const displayName = member.displayName || message.author.username;
+      const answer = await aiService.askAI(prompt, displayName, userId);
+
+      // Pisahkan teks jika melebihi batas 2000 karakter Discord
+      const chunks = splitDiscordMessage(answer, 2000);
+
+      // Reply langsung ke pesan pengirim untuk potongan pertama
+      await message.reply({
+        content: chunks[0],
+        allowedMentions: { repliedUser: true },
+      });
+
+      // Kirim sisa potongan jika ada
+      if ('send' in message.channel) {
+        for (let i = 1; i < chunks.length; i++) {
+          await message.channel.send({ content: chunks[i] });
+        }
+      }
+    } catch (error) {
+      console.error('Error saat memproses command !ask:', error);
+      await message.reply({
+        content: 'Maaf bro, gue lagi sibuk',
+      });
+    }
+    return;
+  }
+
+  // 5. Rule 4: Text Command !reset (Reset AI conversation memory)
+  if (RESET_COMMAND_REGEX.test(content)) {
+    conversationStore.clearSession(userId);
+    await message.reply({
+      content: '🧹 Konteks percakapan AI Anda telah di-reset! Sekarang kita bisa mulai topik baru.',
+      allowedMentions: { repliedUser: true },
+    });
+    return;
+  }
+
+  // 6. Rule 5: AFK Mention Auto-Responder (Ping Notification)
   if (message.mentions.users.size > 0) {
     for (const [mentionedId, mentionedUser] of message.mentions.users) {
       // Abaikan self-mention dan bot

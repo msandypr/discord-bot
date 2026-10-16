@@ -1,16 +1,22 @@
+import { ChatMessage } from '../conversationStore.js';
+
 export interface AIProvider {
   /**
-   * Nama provider yang sedang aktif (contoh: "Google Gemini", "OpenAI-Compatible (Groq)", dsb.)
+   * Nama provider yang sedang aktif (contoh: "Google Gemini", "Dahl Inference", dsb.)
    */
   readonly name: string;
 
   /**
-   * Nama model yang sedang digunakan (contoh: "gemini-2.5-flash", "gpt-4o-mini", "llama-3.3-70b-versatile")
+   * Nama model yang sedang digunakan (contoh: "MiniMaxAI/MiniMax-M2.7", "gemini-2.5-flash")
    */
   readonly model: string;
 
   /**
-   * Mengirim prompt pertanyaan ke provider AI dan mengembalikan respons teks markdown.
+   * Mengirim prompt pertanyaan ke provider AI dengan riwayat obrolan dan mengembalikan respons markdown.
    */
-  generateResponse(prompt: string, userDisplayName?: string): Promise<string>;
+  generateResponse(
+    prompt: string,
+    userDisplayName?: string,
+    history?: ChatMessage[]
+  ): Promise<string>;
 }

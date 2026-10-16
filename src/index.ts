@@ -17,7 +17,6 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers,
   ],
 });
 
@@ -39,6 +38,17 @@ process.on('SIGTERM', () => handleShutdown('SIGTERM'));
 
 // Login to Discord
 client.login(config.discordToken).catch(err => {
-  console.error('❌ Gagal login ke Discord:', err);
+  if (err?.message?.includes('disallowed intents')) {
+    console.error('\n❌ Gagal login: Error "Used disallowed intents"');
+    console.error('👉 Solusi: Buka Discord Developer Portal (https://discord.com/developers/applications)');
+    console.error('   1. Buka aplikasi bot Anda');
+    console.error('   2. Masuk ke tab "Bot" di menu sebelah kiri');
+    console.error('   3. Scroll ke bawah ke bagian "Privileged Gateway Intents"');
+    console.error('   4. Aktifkan centang switch "MESSAGE CONTENT INTENT" (dan "SERVER MEMBERS INTENT")');
+    console.error('   5. Klik tombol hijau "Save Changes" di bagian bawah layar');
+    console.error('   6. Jalankan ulang: npm run dev\n');
+  } else {
+    console.error('❌ Gagal login ke Discord:', err);
+  }
   process.exit(1);
 });

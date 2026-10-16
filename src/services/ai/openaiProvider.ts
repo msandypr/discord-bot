@@ -1,19 +1,24 @@
 import OpenAI from 'openai';
 import { AIProvider } from './types.js';
+import { ChatMessage } from '../conversationStore.js';
+import { buildSystemPrompt } from './persona.js';
 
 export class OpenAICompatibleProvider implements AIProvider {
   public readonly name: string;
   public readonly model: string;
+  private systemPrompt?: string;
   private client: OpenAI | null = null;
 
-  constructor(apiKey?: string, baseURL?: string, model: string = 'gpt-4o-mini') {
+  constructor(apiKey?: string, baseURL?: string, model: string = 'gpt-4o-mini', systemPrompt?: string) {
     this.model = model;
+    this.systemPrompt = systemPrompt;
 
     // Tentukan label display provider yang ramah
     if (baseURL) {
       if (baseURL.includes('groq.com')) this.name = 'Groq';
       else if (baseURL.includes('deepseek.com')) this.name = 'DeepSeek';
       else if (baseURL.includes('openrouter.ai')) this.name = 'OpenRouter';
+      else if (baseURL.includes('dahl.global')) this.name = 'Dahl Inference';
       else if (baseURL.includes('localhost') || baseURL.includes('127.0.0.1')) this.name = 'Local LLM (Ollama/LM Studio)';
       else this.name = 'OpenAI-Compatible';
     } else {
@@ -31,23 +36,30 @@ export class OpenAICompatibleProvider implements AIProvider {
     }
   }
 
-  public async generateResponse(prompt: string, userDisplayName?: string): Promise<string> {
+  public async generateResponse(
+    prompt: string,
+    userDisplayName?: string,
+    history: ChatMessage[] = []
+  ): Promise<string> {
     if (!this.client) {
       return `⚠️ **Konfigurasi Belum Lengkap:** \`OPENAI_API_KEY\` belum diset di file .env server bot.`;
     }
 
     try {
-      const systemInstruction = `Kamu adalah asisten Discord pribadi yang ramah, cerdas, solutif, dan ringkas.
-Format jawabanmu menggunakan Markdown Discord yang rapi (bold, bullet point, blockquote, atau code block jika ada kode).
-Jawablah dengan bahasa yang sama seperti yang digunakan oleh penanya (default: Bahasa Indonesia santun & natural).
-${userDisplayName ? `Pengguna yang sedang bertanya adalah: ${userDisplayName}.` : ''}`;
+      const systemInstruction = buildSystemPrompt(userDisplayName, this.systemPrompt);
+
+      const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+        { role: 'system', content: systemInstruction },
+        ...history.map(msg => ({
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content,
+        })),
+        { role: 'user', content: prompt },
+      ];
 
       const completion = await this.client.chat.completions.create({
         model: this.model,
-        messages: [
-          { role: 'system', content: systemInstruction },
-          { role: 'user', content: prompt },
-        ],
+        messages,
       });
 
       const reply = completion.choices[0]?.message?.content?.trim();
@@ -58,27 +70,7 @@ ${userDisplayName ? `Pengguna yang sedang bertanya adalah: ${userDisplayName}.` 
       return reply;
     } catch (error: any) {
       console.error(`[OpenAICompatibleProvider] Error saat memanggil API (${this.name}):`, error);
-
-      const status = error?.status;
-      const errorMessage = error?.message || String(error);
-
-      if (status === 401 || errorMessage.includes('invalid_api_key') || errorMessage.includes('Incorrect API key')) {
-        return `❌ **Error Autentikasi:** API Key untuk ${this.name} tidak valid. Harap periksa \`OPENAI_API_KEY\`.`;
-      }
-
-      if (status === 404 || errorMessage.includes('model_not_found') || errorMessage.includes('The model')) {
-        return `❌ **Model Tidak Ditemukan:** Model \`${this.model}\` tidak tersedia di ${this.name}. Periksa konfigurasi \`OPENAI_MODEL\`.`;
-      }
-
-      if (status === 429 || errorMessage.includes('rate_limit') || errorMessage.includes('quota')) {
-        return `⏳ **Batas Kuota Tercapai:** Batas pemanggilan API ${this.name} sedang tercapai atau kehabisan kredit.`;
-      }
-
-      if (errorMessage.includes('ECONNREFUSED') || errorMessage.includes('fetch failed')) {
-        return `🔌 **Koneksi Gagal:** Tidak dapat menghubungi endpoint \`${this.name}\`. Jika ini model lokal (Ollama/LM Studio), pastikan layanannya sedang berjalan.`;
-      }
-
-      return `❌ Terjadi kesalahan saat memproses permintaan AI (${this.name}): \`${errorMessage.slice(0, 200)}\``;
+      return 'Maaf bro, gue lagi sibuk';
     }
   }
 }
