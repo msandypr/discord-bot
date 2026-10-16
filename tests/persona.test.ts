@@ -21,4 +21,9 @@ describe('AI Persona & System Prompt', () => {
     expect(prompt).toContain('Kamu adalah bot formal nan kaku.');
     expect(prompt).toContain('Siti');
   });
+
+  it('explicitly forbids refusing absurd questions and enforces sarcastic humor', () => {
+    expect(DEFAULT_AI_PERSONA).toContain('DILARANG MENOLAK PERTANYAAN ABSURD');
+    expect(DEFAULT_AI_PERSONA).toContain('sarkasme kocak');
+  });
 });

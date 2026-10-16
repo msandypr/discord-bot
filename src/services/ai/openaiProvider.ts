@@ -60,6 +60,7 @@ export class OpenAICompatibleProvider implements AIProvider {
       const completion = await this.client.chat.completions.create({
         model: this.model,
         messages,
+        temperature: 0.8,
       });
 
       const reply = completion.choices[0]?.message?.content?.trim();

@@ -45,6 +45,7 @@ export class GeminiProvider implements AIProvider {
         contents,
         config: {
           systemInstruction,
+          temperature: 0.8,
         },
       });
 
