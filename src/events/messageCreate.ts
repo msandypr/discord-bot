@@ -47,6 +47,47 @@ async function processAiQuery(
   }
 }
 
+async function getReferencedMessageContext(
+  message: Message,
+  botId?: string
+): Promise<{ isReplyingToBot: boolean; referencedContext: string }> {
+  let isReplyingToBot = false;
+  let referencedContext = '';
+
+  if (!message.reference?.messageId) {
+    return { isReplyingToBot, referencedContext };
+  }
+
+  // Cek apakah user me-reply dengan ping aktif ke bot
+  if (botId && message.mentions.repliedUser?.id === botId) {
+    isReplyingToBot = true;
+  }
+
+  if (message.channel && 'messages' in message.channel) {
+    try {
+      const refMsg =
+        message.channel.messages.cache.get(message.reference.messageId) ||
+        (await message.channel.messages.fetch(message.reference.messageId));
+
+      if (refMsg) {
+        if (botId && refMsg.author?.id === botId) {
+          isReplyingToBot = true;
+        } else {
+          const authorName = refMsg.member?.displayName || refMsg.author?.username || 'User Lain';
+          const cleanRefContent = refMsg.content?.trim();
+          if (cleanRefContent) {
+            referencedContext = `[Konteks pesan yang sedang di-reply dari @${authorName}]: "${cleanRefContent}"\n`;
+          }
+        }
+      }
+    } catch {
+      // Abaikan jika pesan referensi gagal di-fetch (misal sudah dihapus atau tidak ada permission)
+    }
+  }
+
+  return { isReplyingToBot, referencedContext };
+}
+
 export async function handleMessageCreate(message: Message): Promise<void> {
   // 1. Abaikan pesan dari bot atau pesan di luar server (Direct Message)
   if (message.author.bot || !message.guild || !message.member) {
@@ -57,6 +98,7 @@ export async function handleMessageCreate(message: Message): Promise<void> {
   const guildId = message.guild.id;
   const userId = message.author.id;
   const member = message.member;
+  const displayName = member.displayName || message.author.username;
 
   // 2. Rule 1: Set AFK Command (!afk [alasan])
   const afkMatch = content.match(AFK_COMMAND_REGEX);
@@ -126,19 +168,30 @@ export async function handleMessageCreate(message: Message): Promise<void> {
     }
   }
 
+  // Cek apakah pesan ini me-reply pesan lain di server
+  const botId = message.client?.user?.id;
+  const { isReplyingToBot, referencedContext } = await getReferencedMessageContext(message, botId);
+
   // 4. Rule 3: Text Command !ask [pertanyaan]
   const askMatch = content.match(ASK_COMMAND_REGEX);
   if (askMatch) {
-    const prompt = askMatch[1]?.trim();
-    if (!prompt) {
+    let prompt = askMatch[1]?.trim() || '';
+    if (!prompt && !referencedContext) {
       await message.reply({
         content: '⚠️ Harap sertakan pertanyaan Anda.\nContoh: `!ask apa perbedaan RAM dan ROM?`',
       });
       return;
     }
 
-    const displayName = member.displayName || message.author.username;
-    await processAiQuery(message, prompt, displayName, userId);
+    if (!prompt && referencedContext) {
+      prompt = 'Gimana menurut lu? Komentarin atau tanggapi pesan di atas.';
+    }
+
+    const fullPrompt = referencedContext
+      ? `${referencedContext}[Tanggapan/Pertanyaan dari ${displayName}]: "${prompt}"`
+      : prompt;
+
+    await processAiQuery(message, fullPrompt, displayName, userId);
     return;
   }
 
@@ -153,26 +206,6 @@ export async function handleMessageCreate(message: Message): Promise<void> {
   }
 
   // 6. Rule 5: Reply ke pesan Bot atau Mention Bot langsung (@Bot) tanpa !ask
-  const botId = message.client?.user?.id;
-  let isReplyingToBot = false;
-
-  if (message.reference?.messageId && botId) {
-    if (message.mentions.repliedUser?.id === botId) {
-      isReplyingToBot = true;
-    } else if (message.channel && 'messages' in message.channel) {
-      try {
-        const refMsg =
-          message.channel.messages.cache.get(message.reference.messageId) ||
-          (await message.channel.messages.fetch(message.reference.messageId));
-        if (refMsg?.author?.id === botId) {
-          isReplyingToBot = true;
-        }
-      } catch {
-        // Abaikan jika pesan referensi tidak dapat di-fetch
-      }
-    }
-  }
-
   const isDirectBotMention = Boolean(botId && message.mentions.users.has(botId));
 
   if (isReplyingToBot || isDirectBotMention) {
@@ -182,15 +215,24 @@ export async function handleMessageCreate(message: Message): Promise<void> {
       cleanPrompt = cleanPrompt.replace(new RegExp(`<@!?${botId}>`, 'g'), '').trim();
     }
 
+    // Kasus 1: User me-reply pesan teman/orang lain sambil me-mention bot
+    if (referencedContext) {
+      const userQuestion = cleanPrompt || 'Gimana menurut lu? Komentarin atau tanggapi pesan di atas.';
+      const fullPrompt = `${referencedContext}[Tanggapan/Pertanyaan dari ${displayName}]: "${userQuestion}"`;
+      await processAiQuery(message, fullPrompt, displayName, userId);
+      return;
+    }
+
+    // Kasus 2: User mention bot langsung tapi pesan kosong (tanpa reply)
     if (!cleanPrompt) {
       await message.reply({
-        content: 'Napa manggil-manggil gue? Mau nanya apaan, buruan.',
+        content: 'Napa manggil-manggil gue? Mau nanya apaan, buruan. 🗿',
         allowedMentions: { repliedUser: true },
       });
       return;
     }
 
-    const displayName = member.displayName || message.author.username;
+    // Kasus 3: User me-reply bot langsung, atau mention bot dengan pertanyaan
     await processAiQuery(message, cleanPrompt, displayName, userId);
     return;
   }

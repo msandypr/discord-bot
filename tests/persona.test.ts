@@ -22,8 +22,9 @@ describe('AI Persona & System Prompt', () => {
     expect(prompt).toContain('Siti');
   });
 
-  it('explicitly forbids refusing absurd questions and enforces sarcastic humor', () => {
+  it('explicitly forbids refusing absurd questions and enforces sarcastic humor and emojis', () => {
     expect(DEFAULT_AI_PERSONA).toContain('DILARANG MENOLAK PERTANYAAN ABSURD');
-    expect(DEFAULT_AI_PERSONA).toContain('sarkasme kocak');
+    expect(DEFAULT_AI_PERSONA).toContain('WAJIB PAKAI EMOJI EKSPRESIF');
+    expect(DEFAULT_AI_PERSONA).toContain('TANGGAPI PESAN REPLY DENGAN NYAMBUNG');
   });
 });

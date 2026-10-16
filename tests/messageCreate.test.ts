@@ -303,4 +303,106 @@ describe('messageCreate Pipeline', () => {
       })
     );
   });
+
+  it('includes context when replying to a friend and tagging @Bot', async () => {
+    vi.spyOn(aiService, 'askAI').mockResolvedValue('Budi ngawur, HTML itu bukan bahasa pemrograman buat ngehack.');
+
+    const sendTypingMock = vi.fn().mockResolvedValue(undefined);
+    const replyMock = vi.fn().mockResolvedValue(undefined);
+    const mentionsMap = new Map([['bot_app_id', { id: 'bot_app_id', bot: true }]]);
+
+    const mockMessage: any = {
+      author: { id: 'user_normal', bot: false, username: 'Agus' },
+      guild: { id: 'guild_test' },
+      member: { displayName: 'Agus', user: { username: 'Agus' } },
+      channel: {
+        sendTyping: sendTypingMock,
+        send: vi.fn(),
+        messages: {
+          cache: new Map([
+            [
+              'friend_msg_1',
+              {
+                author: { id: 'user_friend', username: 'Budi' },
+                member: { displayName: 'Budi' },
+                content: 'Gue mau ngehack NASA pake tag <div> HTML bro.',
+              },
+            ],
+          ]),
+        },
+      },
+      client: { user: { id: 'bot_app_id' } },
+      reference: { messageId: 'friend_msg_1' },
+      content: '<@bot_app_id> bener gak sih kata dia?',
+      reply: replyMock,
+      mentions: { users: mentionsMap, repliedUser: { id: 'user_friend' } },
+    };
+
+    await handleMessageCreate(mockMessage);
+
+    expect(sendTypingMock).toHaveBeenCalled();
+    expect(aiService.askAI).toHaveBeenCalledWith(
+      expect.stringContaining('[Konteks pesan yang sedang di-reply dari @Budi]: "Gue mau ngehack NASA pake tag <div> HTML bro."'),
+      'Agus',
+      'user_normal'
+    );
+    expect(aiService.askAI).toHaveBeenCalledWith(
+      expect.stringContaining('[Tanggapan/Pertanyaan dari Agus]: "bener gak sih kata dia?"'),
+      'Agus',
+      'user_normal'
+    );
+    expect(replyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: 'Budi ngawur, HTML itu bukan bahasa pemrograman buat ngehack.',
+      })
+    );
+  });
+
+  it('includes context when replying to a friend using !ask', async () => {
+    vi.spyOn(aiService, 'askAI').mockResolvedValue('Mending beli motor daripada laptop 50jt buat Zuma.');
+
+    const sendTypingMock = vi.fn().mockResolvedValue(undefined);
+    const replyMock = vi.fn().mockResolvedValue(undefined);
+
+    const mockMessage: any = {
+      author: { id: 'user_normal', bot: false, username: 'Agus' },
+      guild: { id: 'guild_test' },
+      member: { displayName: 'Agus', user: { username: 'Agus' } },
+      channel: {
+        sendTyping: sendTypingMock,
+        send: vi.fn(),
+        messages: {
+          cache: new Map([
+            [
+              'friend_msg_2',
+              {
+                author: { id: 'user_friend', username: 'Budi' },
+                member: { displayName: 'Budi' },
+                content: 'Gue mau beli laptop 50 juta buat main Zuma.',
+              },
+            ],
+          ]),
+        },
+      },
+      client: { user: { id: 'bot_app_id' } },
+      reference: { messageId: 'friend_msg_2' },
+      content: '!ask mending beli apa?',
+      reply: replyMock,
+      mentions: { users: new Map(), repliedUser: { id: 'user_friend' } },
+    };
+
+    await handleMessageCreate(mockMessage);
+
+    expect(sendTypingMock).toHaveBeenCalled();
+    expect(aiService.askAI).toHaveBeenCalledWith(
+      expect.stringContaining('[Konteks pesan yang sedang di-reply dari @Budi]: "Gue mau beli laptop 50 juta buat main Zuma."'),
+      'Agus',
+      'user_normal'
+    );
+    expect(aiService.askAI).toHaveBeenCalledWith(
+      expect.stringContaining('[Tanggapan/Pertanyaan dari Agus]: "mending beli apa?"'),
+      'Agus',
+      'user_normal'
+    );
+  });
 });
