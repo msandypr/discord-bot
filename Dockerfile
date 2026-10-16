@@ -33,6 +33,5 @@ RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=builder /app/dist ./dist
 
 RUN mkdir -p /app/data
-VOLUME ["/app/data"]
 
 CMD ["node", "dist/index.js"]
