@@ -13,6 +13,7 @@ export interface Config {
 
   // AI Configuration
   aiProvider: AIProviderType;
+  aiTemperature?: number;
   geminiApiKey: string;
   geminiModel: string;
   openaiApiKey: string;
@@ -27,6 +28,7 @@ export function loadConfig(): Config {
   const geminiApiKey = process.env.GEMINI_API_KEY || '';
   const openaiApiKey = process.env.OPENAI_API_KEY || '';
   const openaiBaseUrl = process.env.OPENAI_BASE_URL || undefined;
+  const aiTemperature = process.env.AI_TEMPERATURE ? parseFloat(process.env.AI_TEMPERATURE) : 0.7;
 
   const rawProvider = (process.env.AI_PROVIDER || 'auto').toLowerCase();
   const aiProvider: AIProviderType =
@@ -51,11 +53,12 @@ export function loadConfig(): Config {
     databasePath: process.env.DATABASE_PATH || path.join(process.cwd(), 'data', 'afk.sqlite'),
 
     aiProvider,
+    aiTemperature,
     geminiApiKey,
-    geminiModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+    geminiModel: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
     openaiApiKey,
     openaiBaseUrl,
-    openaiModel: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+    openaiModel: process.env.OPENAI_MODEL || 'llama-3.1-8b-instant',
     aiSystemPrompt: process.env.AI_SYSTEM_PROMPT || undefined,
   };
 }

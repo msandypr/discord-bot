@@ -11,13 +11,8 @@ Bot Discord multifungsi yang memadukan **AI Personal Assistant** berbasis multi-
      * **Slash Command:** `/ask prompt: <pertanyaan>` (dengan menu pop-up Discord & auto-deferral).
      * **Chat Biasa:** `!ask <pertanyaan>` (bot akan membalas langsung dengan *typing indicator* dan auto-reply).
    * **Penyedia AI yang Didukung:**
-     * **Google Gemini:** Native support via `@google/genai` (`gemini-2.5-flash`, `gemini-1.5-flash`).
-     * **Dahl Inference:** Inferensi terdesentralisasi via [Dahl Global](https://inference.dahl.global/) (`MiniMaxAI/MiniMax-M2.7`, `deepseek-ai/DeepSeek-V4-Flash-0731`, `zai-org/GLM-5.3-Flash`).
-     * **Groq:** Inferensi ultra-cepat gratis (`llama-3.3-70b-versatile`).
-     * **DeepSeek:** Model penalaran & chat hemat biaya (`deepseek-chat`, `deepseek-reasoner`).
-     * **OpenRouter:** Akses ratusan model open-source & proprietary.
-     * **Local LLM (Offline):** Dukungan penuh untuk Ollama (`http://localhost:11434/v1`) dan LM Studio tanpa biaya API.
-     * **OpenAI Resmi:** `gpt-4o`, `gpt-4o-mini`.
+     * **Google Gemini:**
+     * **OpenAI Compatible:**
    * **Message Chunking:** Otomatis membagi jawaban panjang $> 2000$ karakter secara cerdas agar tidak terpotong.
 
 2. **Sistem AFK Pintar (`/afk` & `!afk`):**

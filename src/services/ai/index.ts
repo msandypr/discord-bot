@@ -10,22 +10,24 @@ export * from './geminiProvider.js';
 export * from './openaiProvider.js';
 
 export function createAIProvider(cfg: Config = config): AIProvider {
+  const temperature = cfg.aiTemperature ?? 0.7;
+
   if (cfg.aiProvider === 'gemini') {
-    return new GeminiProvider(cfg.geminiApiKey, cfg.geminiModel, cfg.aiSystemPrompt);
+    return new GeminiProvider(cfg.geminiApiKey, cfg.geminiModel, cfg.aiSystemPrompt, temperature);
   }
 
   if (cfg.aiProvider === 'openai') {
-    return new OpenAICompatibleProvider(cfg.openaiApiKey, cfg.openaiBaseUrl, cfg.openaiModel, cfg.aiSystemPrompt);
+    return new OpenAICompatibleProvider(cfg.openaiApiKey, cfg.openaiBaseUrl, cfg.openaiModel, cfg.aiSystemPrompt, temperature);
   }
 
   // Auto-detection logic:
   // 1. Jika konfigurasi OpenAI / baseURL lokal diisi dan Gemini kosong -> pakai OpenAI
   if ((cfg.openaiApiKey || cfg.openaiBaseUrl) && !cfg.geminiApiKey) {
-    return new OpenAICompatibleProvider(cfg.openaiApiKey, cfg.openaiBaseUrl, cfg.openaiModel, cfg.aiSystemPrompt);
+    return new OpenAICompatibleProvider(cfg.openaiApiKey, cfg.openaiBaseUrl, cfg.openaiModel, cfg.aiSystemPrompt, temperature);
   }
 
   // 2. Default: gunakan Gemini
-  return new GeminiProvider(cfg.geminiApiKey, cfg.geminiModel, cfg.aiSystemPrompt);
+  return new GeminiProvider(cfg.geminiApiKey, cfg.geminiModel, cfg.aiSystemPrompt, temperature);
 }
 
 export class AIService {

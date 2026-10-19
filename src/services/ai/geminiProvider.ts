@@ -6,12 +6,14 @@ import { buildSystemPrompt } from './persona.js';
 export class GeminiProvider implements AIProvider {
   public readonly name = 'Google Gemini';
   public readonly model: string;
+  public readonly temperature: number;
   private systemPrompt?: string;
   private ai: GoogleGenAI | null = null;
 
-  constructor(apiKey?: string, model: string = 'gemini-2.5-flash', systemPrompt?: string) {
+  constructor(apiKey?: string, model: string = 'gemini-3.8-flash', systemPrompt?: string, temperature: number = 0.7) {
     this.model = model;
     this.systemPrompt = systemPrompt;
+    this.temperature = temperature;
     if (apiKey) {
       this.ai = new GoogleGenAI({ apiKey });
     }
@@ -46,7 +48,7 @@ export class GeminiProvider implements AIProvider {
         contents,
         config: {
           systemInstruction,
-          temperature: 0.8,
+          temperature: this.temperature,
         },
       });
 

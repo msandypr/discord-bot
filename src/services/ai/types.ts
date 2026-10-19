@@ -7,7 +7,7 @@ export interface AIProvider {
   readonly name: string;
 
   /**
-   * Nama model yang sedang digunakan (contoh: "MiniMaxAI/MiniMax-M2.7", "gemini-2.5-flash")
+   * Nama model yang sedang digunakan (contoh: "MiniMaxAI/MiniMax-M2.7", "gemini-3.8-flash")
    */
   readonly model: string;
 
