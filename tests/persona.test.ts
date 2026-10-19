@@ -27,4 +27,13 @@ describe('AI Persona & System Prompt', () => {
     expect(DEFAULT_AI_PERSONA).toContain('WAJIB PAKAI EMOJI EKSPRESIF');
     expect(DEFAULT_AI_PERSONA).toContain('TANGGAPI PESAN REPLY DENGAN NYAMBUNG');
   });
+
+  it('strictly forbids Jaksel code-mixing and enforces natural ngeselin tone without corny jokes', () => {
+    expect(DEFAULT_AI_PERSONA).toContain('DILARANG MENGGUNAKAN BAHASA JAKSEL');
+    expect(DEFAULT_AI_PERSONA).toContain('literally');
+    expect(DEFAULT_AI_PERSONA).toContain('which is');
+    expect(DEFAULT_AI_PERSONA).toContain('NATURAL NGESELIN');
+    expect(DEFAULT_AI_PERSONA).toContain('JANGAN GARING');
+    expect(DEFAULT_AI_PERSONA).toContain('Konteks balasan bot sebelumnya');
+  });
 });

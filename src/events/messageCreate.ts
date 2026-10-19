@@ -6,10 +6,14 @@ import { formatAfkNickname, removeAfkPrefix } from '../utils/nickname.js';
 import { splitDiscordMessage } from '../utils/chunker.js';
 import { timeSince } from '../utils/time.js';
 import { formatDiscordMentions, MentionUser } from '../utils/mentions.js';
+import { createHelpEmbed } from '../commands/help.js';
+import { createAboutEmbed, createAboutComponents } from '../commands/about.js';
 
 const AFK_COMMAND_REGEX = /^!afk(?:\s+(.*))?$/i;
 const ASK_COMMAND_REGEX = /^!ask(?:\s+(.*))?$/i;
 const RESET_COMMAND_REGEX = /^!reset$/i;
+const HELP_COMMAND_REGEX = /^!help$/i;
+const ABOUT_COMMAND_REGEX = /^!about$/i;
 
 async function processAiQuery(
   message: Message,
@@ -84,17 +88,52 @@ async function getReferencedMessageContext(
 
   if (message.channel && 'messages' in message.channel) {
     try {
+      const channelMessages = message.channel.messages;
       const refMsg =
-        message.channel.messages.cache.get(message.reference.messageId) ||
-        (await message.channel.messages.fetch(message.reference.messageId));
+        channelMessages.cache?.get(message.reference.messageId) ||
+        (typeof (channelMessages as any)?.fetch === 'function'
+          ? await (channelMessages as any).fetch(message.reference.messageId)
+          : undefined);
 
       if (refMsg) {
+        const cleanRefContent =
+          refMsg.cleanContent?.trim() ||
+          refMsg.content?.trim() ||
+          refMsg.embeds?.[0]?.description?.trim();
+
         if (botId && refMsg.author?.id === botId) {
           isReplyingToBot = true;
+
+          // Cek apakah pesan bot ini sebelumnya me-reply pesan lain (pertanyaan awal user)
+          let parentContext = '';
+          if (refMsg.reference?.messageId) {
+            try {
+              const parentMsg =
+                channelMessages.cache?.get(refMsg.reference.messageId) ||
+                (typeof (channelMessages as any)?.fetch === 'function'
+                  ? await (channelMessages as any).fetch(refMsg.reference.messageId)
+                  : undefined);
+              const cleanParentContent =
+                parentMsg?.cleanContent?.trim() ||
+                parentMsg?.content?.trim() ||
+                parentMsg?.embeds?.[0]?.description?.trim();
+              if (cleanParentContent) {
+                const parentAuthorName = parentMsg.member?.displayName || parentMsg.author?.username || 'User';
+                parentContext = `[Pertanyaan/Pesan awal dari ${parentAuthorName}]: "${cleanParentContent}"\n`;
+              }
+            } catch {
+              // Abaikan jika parent pesan awal gagal di-fetch
+            }
+          }
+
+          if (cleanRefContent) {
+            referencedContext = `${parentContext}[Konteks balasan bot sebelumnya yang sedang di-reply]: "${cleanRefContent}"\n`;
+          } else if (parentContext) {
+            referencedContext = parentContext;
+          }
         } else {
           const authorName = refMsg.member?.displayName || refMsg.author?.username || 'User Lain';
           const authorId = refMsg.author?.id;
-          const cleanRefContent = refMsg.content?.trim();
           if (cleanRefContent) {
             if (authorId) {
               referencedAuthor = { id: authorId, name: authorName };
@@ -109,6 +148,40 @@ async function getReferencedMessageContext(
   }
 
   return { isReplyingToBot, referencedContext, referencedAuthor };
+}
+
+async function getRecentChannelContext(message: Message, botId?: string): Promise<string> {
+  // Jika sudah me-reply pesan spesifik, tidak perlu mengambil konteks umum channel
+  if (message.reference?.messageId) {
+    return '';
+  }
+
+  if (
+    message.channel &&
+    'messages' in message.channel &&
+    typeof (message.channel.messages as any)?.fetch === 'function'
+  ) {
+    try {
+      const recent = await (message.channel.messages as any).fetch({ limit: 4, before: message.id });
+      if (!recent || recent.size === 0) return '';
+
+      const lines = Array.from(recent.values())
+        .reverse()
+        .filter((m: any) => !m.content?.startsWith('!') && (m.cleanContent?.trim() || m.content?.trim()))
+        .map((m: any) => {
+          const sender = m.member?.displayName || m.author?.username || 'User';
+          const text = (m.cleanContent?.trim() || m.content?.trim() || '').replace(/\n+/g, ' ');
+          return `${sender}: "${text}"`;
+        });
+
+      if (lines.length > 0) {
+        return `[Konteks percakapan terkini di channel]:\n${lines.join('\n')}\n`;
+      }
+    } catch {
+      // Abaikan jika fetch gagal
+    }
+  }
+  return '';
 }
 
 export async function handleMessageCreate(message: Message): Promise<void> {
@@ -211,8 +284,10 @@ export async function handleMessageCreate(message: Message): Promise<void> {
       prompt = 'Gimana menurut lu? Komentarin atau tanggapi pesan di atas.';
     }
 
-    const fullPrompt = referencedContext
-      ? `${referencedContext}[Tanggapan/Pertanyaan dari ${displayName}]: "${prompt}"`
+    const effectiveContext = referencedContext || (await getRecentChannelContext(message, botId));
+
+    const fullPrompt = effectiveContext
+      ? `${effectiveContext}[Tanggapan/Pertanyaan dari ${displayName}]: "${prompt}"`
       : prompt;
 
     await processAiQuery(message, fullPrompt, displayName, userId, mentionTargets);
@@ -229,7 +304,29 @@ export async function handleMessageCreate(message: Message): Promise<void> {
     return;
   }
 
-  // 6. Rule 5: Reply ke pesan Bot atau Mention Bot langsung (@Bot) tanpa !ask
+  // 6. Text Command !help (Menu Bantuan & Daftar Perintah)
+  if (HELP_COMMAND_REGEX.test(content)) {
+    const helpEmbed = createHelpEmbed();
+    await message.reply({
+      embeds: [helpEmbed],
+      allowedMentions: { repliedUser: true },
+    });
+    return;
+  }
+
+  // 7. Text Command !about (Informasi tentang Bot & Kreator)
+  if (ABOUT_COMMAND_REGEX.test(content)) {
+    const aboutEmbed = createAboutEmbed();
+    const components = createAboutComponents();
+    await message.reply({
+      embeds: [aboutEmbed],
+      components,
+      allowedMentions: { repliedUser: true },
+    });
+    return;
+  }
+
+  // 8. Rule 5: Reply ke pesan Bot atau Mention Bot langsung (@Bot) tanpa !ask
   const isDirectBotMention = Boolean(botId && message.mentions.users.has(botId));
 
   if (isReplyingToBot || isDirectBotMention) {
@@ -239,7 +336,7 @@ export async function handleMessageCreate(message: Message): Promise<void> {
       cleanPrompt = cleanPrompt.replace(new RegExp(`<@!?${botId}>`, 'g'), '').trim();
     }
 
-    // Kasus 1: User me-reply pesan teman/orang lain sambil me-mention bot
+    // Kasus 1: User me-reply pesan (teman atau bot)
     if (referencedContext) {
       const userQuestion = cleanPrompt || 'Gimana menurut lu? Komentarin atau tanggapi pesan di atas.';
       const fullPrompt = `${referencedContext}[Tanggapan/Pertanyaan dari ${displayName}]: "${userQuestion}"`;
@@ -256,8 +353,13 @@ export async function handleMessageCreate(message: Message): Promise<void> {
       return;
     }
 
-    // Kasus 3: User me-reply bot langsung, atau mention bot dengan pertanyaan
-    await processAiQuery(message, cleanPrompt, displayName, userId, mentionTargets);
+    // Kasus 3: User mention bot langsung dengan pertanyaan (bukan reply spesifik)
+    const channelContext = await getRecentChannelContext(message, botId);
+    const fullPrompt = channelContext
+      ? `${channelContext}[Tanggapan/Pertanyaan dari ${displayName}]: "${cleanPrompt}"`
+      : cleanPrompt;
+
+    await processAiQuery(message, fullPrompt, displayName, userId, mentionTargets);
     return;
   }
 

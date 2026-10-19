@@ -1,6 +1,6 @@
 # Discord Assistant & AFK Manager Bot 🤖💤
 
-Bot Discord multifungsi yang memadukan **AI Personal Assistant** berbasis multi-provider (**Google Gemini & OpenAI-Compatible**: Dahl Inference, DeepSeek, Groq, OpenRouter, Ollama, OpenAI) dengan sistem **Presence & AFK Management** otomatis.
+Bot Discord multifungsi yang memadukan **AI Personal Assistant** berbasis multi-provider (**Google Gemini & OpenAI-Compatible**) dengan sistem **Presence & AFK Management** otomatis.
 
 ---
 
@@ -60,43 +60,16 @@ Pilih provider AI sesuai kebutuhan:
 #### Opsi A: Google Gemini (Default)
 ```ini
 AI_PROVIDER=gemini
-GEMINI_API_KEY=AIzaSy...
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-3.8-flash
 ```
 
-#### Opsi B: Dahl Inference (https://inference.dahl.global/)
+#### Opsi B: OpenAI Compatible
 ```ini
 AI_PROVIDER=openai
-OPENAI_BASE_URL=https://inference.dahl.global/v1
-OPENAI_API_KEY=key_anda_dari_dahl_account
-OPENAI_MODEL=MiniMaxAI/MiniMax-M2.7
-# Model alternatif di Dahl:
-# - deepseek-ai/DeepSeek-V4-Flash-0731
-# - zai-org/GLM-5.3-Flash
-```
-
-#### Opsi C: Groq (Inferensi Ultra-Cepat)
-```ini
-AI_PROVIDER=openai
-OPENAI_BASE_URL=https://api.groq.com/openai/v1
-OPENAI_API_KEY=gsk_...
-OPENAI_MODEL=llama-3.3-70b-versatile
-```
-
-#### Opsi D: DeepSeek
-```ini
-AI_PROVIDER=openai
-OPENAI_BASE_URL=https://api.deepseek.com/v1
-OPENAI_API_KEY=sk-...
-OPENAI_MODEL=deepseek-chat
-```
-
-#### Opsi E: Local LLM via Ollama (Gratis & Offline)
-```ini
-AI_PROVIDER=openai
-OPENAI_BASE_URL=http://localhost:11434/v1
-OPENAI_API_KEY=ollama
-OPENAI_MODEL=llama3.2
+OPENAI_BASE_URL=your_base_url
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_MODEL=your_openai_model
 ```
 
 ### 3. Daftarkan Slash Command (`/ask`, `/afk`, `/unafk`)

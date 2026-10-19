@@ -3,12 +3,16 @@ import { config } from '../config.js';
 import { askCommandData } from './ask.js';
 import { resetCommandData } from './reset.js';
 import { afkCommandData, unafkCommandData } from './afk.js';
+import { helpCommandData } from './help.js';
+import { aboutCommandData } from './about.js';
 
 const commands = [
   askCommandData.toJSON(),
   resetCommandData.toJSON(),
   afkCommandData.toJSON(),
   unafkCommandData.toJSON(),
+  helpCommandData.toJSON(),
+  aboutCommandData.toJSON(),
 ];
 
 const rest = new REST({ version: '10' }).setToken(config.discordToken);

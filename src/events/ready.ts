@@ -11,7 +11,7 @@ export function handleReady(client: Client<true>): void {
       {
         name: `!afk & /ask (${aiService.currentProvider.name})`,
         type: ActivityType.Custom,
-        state: `Ketik !afk atau gunakan /ask untuk bantuan AI`,
+        state: `Halo! Gue Anomali :D`,
       },
     ],
     status: 'online',
